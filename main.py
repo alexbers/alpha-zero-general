@@ -17,21 +17,42 @@ args = dict({
     'cpuct': 1,
 
     'checkpoint': './temp/',
-    'load_model': False,
-    'load_folder_file': ('./temp','checkpoint_3.pth.tar'),
     'numItersForTrainExamplesHistory': 20,
-
 })
 
 if __name__=="__main__":
     g = Game()
-    nnet = nn(g)
 
-    if args["load_model"]:
-        nnet.load_checkpoint(args["load_folder_file"][0], args["load_folder_file"][1])
+    start_iter = int(sys.argv[1])
+    action = sys.argv[2]
 
-    c = Coach(g, nnet, args)
-    if args["load_model"]:
-        print("Load trainExamples from file")
-        c.loadTrainExamples()
-    c.learn()
+    if action == "gen_samples":
+        nnet = nn(g, multigpu=False)
+        if start_iter != 1:
+            nnet.load_checkpoint(args["checkpoint"], "checkpoint_%d.pth.tar" % (start_iter-1))
+        c = Coach(g, nnet, args)
+        if start_iter != 1:
+            c.loadTrainExamples(start_iter-2)
+
+        c.gen_samples(start_iter)
+    elif action == "fit":
+        nnet = nn(g, multigpu=True)
+        if start_iter != 1:
+            nnet.load_checkpoint(args["checkpoint"], "checkpoint_%d.pth.tar" % (start_iter-1))
+
+        c = Coach(g, nnet, args)
+        c.loadTrainExamples(start_iter-1)
+        c.fit(start_iter)
+    elif action == "pit":
+        nnet = nn(g, multigpu=False)
+        if start_iter != 1:
+            nnet.load_checkpoint(args["checkpoint"], "checkpoint_%d.pth.tar.next" % start_iter)
+
+        c = Coach(g, nnet, args)
+        c.pit(start_iter)
+
+
+
+        # if args["load_model"]:
+        # print("Load trainExamples from file")
+    # c.learn()
