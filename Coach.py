@@ -64,7 +64,7 @@ class Coach():
 
     def gen_samples(self, iteration):
             print('------ITER ' + str(iteration) + '------')
-        
+
             iterationTrainExamples = deque([], maxlen=self.args["maxlenOfQueue"])
             eps_time = AverageMeter()
             bar = Bar('Self Play', max=self.args["numEps"])
@@ -79,19 +79,18 @@ class Coach():
                 eps_time.update(time.time() - end)
                 end = time.time()
                 bar.suffix  = '({eps}/{maxeps}) Eps Time: {et:.3f}s | Total: {total:} | ETA: {eta:}'.format(eps=eps+1, maxeps=self.args["numEps"], et=eps_time.avg,
-                                                                                                               total=bar.elapsed_td, eta=bar.eta_td)
+                                                                                                            total=bar.elapsed_td, eta=bar.eta_td)
                 bar.next()
             bar.finish()
-
-            # save the iteration examples to the history 
-            self.trainExamplesHistory.append(iterationTrainExamples)
-
-            if len(self.trainExamplesHistory) > self.args["numItersForTrainExamplesHistory"]:
-                print("len(trainExamplesHistory) =", len(self.trainExamplesHistory), " => remove the oldest trainExamples")
-                self.trainExamplesHistory.pop(0)
-            self.saveTrainExamples(iteration-1)
+            
+            self.saveTrainExamples(iteration-1, iterationTrainExamples)
 
     def fit(self, iteration):
+
+        all_iterations = range(0, iteration)
+        for i in all_iterations[-self.args["numItersForTrainExamplesHistory"]:]:
+            self.loadTrainExamples(i)
+
         trainExamples = []
         for e in self.trainExamplesHistory:
             trainExamples.extend(e)
@@ -127,17 +126,18 @@ class Coach():
 
 
     def getCheckpointFile(self, iteration):
-        return 'checkpoint_' + str(iteration) + '.pth.tar'
+        return 
 
-    def saveTrainExamples(self, iteration):
+    def saveTrainExamples(self, iteration, examples):
         folder = self.args["checkpoint"]
         if not os.path.exists(folder):
             os.makedirs(folder)
-        filename = os.path.join(folder, self.getCheckpointFile(iteration)+".examples")
+        filename = os.path.join(folder,'checkpoint_%s.pth.tar.examples' % iteration)
         with open(filename, "wb+") as f:
-            Pickler(f).dump(self.trainExamplesHistory)
+            Pickler(f).dump(examples)
 
     def loadTrainExamples(self, iteration):
+        print("load", iteration)
         modelFile = os.path.join(self.args["checkpoint"], "checkpoint_%d.pth.tar" % iteration)
         examplesFile = modelFile+".examples"
         if not os.path.isfile(examplesFile):
@@ -145,6 +145,5 @@ class Coach():
             r = input("File with trainExamples not found. Exiting")
             sys.exit()
         else:
-            print("File with trainExamples found. Read it.")
             with open(examplesFile, "rb") as f:
-                self.trainExamplesHistory = Unpickler(f).load()
+                self.trainExamplesHistory.append(Unpickler(f).load())

@@ -31,8 +31,6 @@ if __name__=="__main__":
         if start_iter != 1:
             nnet.load_checkpoint(args["checkpoint"], "checkpoint_%d.pth.tar" % (start_iter-1))
         c = Coach(g, nnet, args)
-        if start_iter != 1:
-            c.loadTrainExamples(start_iter-2)
 
         c.gen_samples(start_iter)
     elif action == "fit":
@@ -41,7 +39,6 @@ if __name__=="__main__":
             nnet.load_checkpoint(args["checkpoint"], "checkpoint_%d.pth.tar" % (start_iter-1))
 
         c = Coach(g, nnet, args)
-        c.loadTrainExamples(start_iter-1)
         c.fit(start_iter)
     elif action == "pit":
         nnet = nn(g, multigpu=False)
