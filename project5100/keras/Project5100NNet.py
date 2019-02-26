@@ -9,7 +9,7 @@ from keras.optimizers import *
 from keras.utils import multi_gpu_model
 
 class Project5100NNet():
-    def __init__(self, game, args):
+    def __init__(self, game, args, multigpu=False):
         # game params
         self.board_x, self.board_y = game.getBoardSize()
         self.action_size = game.getActionSize()
@@ -30,6 +30,9 @@ class Project5100NNet():
         self.v = Dense(1, activation='tanh', name='v')(s_fc2)                    # batch_size x 1
 
         self.model = Model(inputs=self.input_boards, outputs=[self.pi, self.v])
-        self.pmodel = multi_gpu_model(self.model, gpus=3)
+        if multigpu:
+            self.pmodel = multi_gpu_model(self.model, gpus=3)
+        else:
+            self.pmodel = self.model
         self.pmodel.compile(loss=['categorical_crossentropy','mean_squared_error'], optimizer=Adam(args["lr"]))
 

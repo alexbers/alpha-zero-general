@@ -25,8 +25,8 @@ args = {
 }
 
 class NNetWrapper(NeuralNet):
-    def __init__(self, game):
-        self.nnet = project5100(game, args)
+    def __init__(self, game, multigpu=False):
+        self.nnet = project5100(game, args, multigpu)
         self.board_x, self.board_y = game.getBoardSize()
         self.action_size = game.getActionSize()
 
@@ -65,7 +65,7 @@ class NNetWrapper(NeuralNet):
         # end = time.time()
         # print("v=%s"%v,"time=%s"%(end-start))
 
-        print('PREDICTION TIME TAKEN : {0:03f}'.format(time.time()-start))
+        # print('PREDICTION TIME TAKEN : {0:03f}'.format(time.time()-start))
         return pi[0], v[0]
 
     def save_checkpoint(self, folder='checkpoint', filename='checkpoint.pth.tar'):
