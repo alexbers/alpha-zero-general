@@ -8,7 +8,7 @@ from utils import *
 
 args = dict({
     'numIters': 1000,
-    'numEps': 100,
+    'numEps': 102,
     'tempThreshold': 15,
     'updateThreshold': 0.55,
     'maxlenOfQueue': 200000,
@@ -18,6 +18,7 @@ args = dict({
 
     'checkpoint': './temp/',
     'numItersForTrainExamplesHistory': 20,
+    'genFilesPerIteration': 3 
 })
 
 if __name__=="__main__":
@@ -27,12 +28,14 @@ if __name__=="__main__":
     action = sys.argv[2]
 
     if action == "gen_samples":
+        proc_num = int(sys.argv[3])
+
         nnet = nn(g, multigpu=False)
         if start_iter != 1:
             nnet.load_checkpoint(args["checkpoint"], "checkpoint_%d.pth.tar" % (start_iter-1))
         c = Coach(g, nnet, args)
 
-        c.gen_samples(start_iter)
+        c.gen_samples(start_iter, proc_num)
     elif action == "fit":
         nnet = nn(g, multigpu=True)
         if start_iter != 1:
