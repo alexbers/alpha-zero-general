@@ -19,7 +19,7 @@ args = {
     'lr': 0.001,
     'dropout': 0.3,
     'epochs': 10,
-    'batch_size': 64,
+    'batch_size': 1024*3,
     'cuda': False,
     'num_channels': 256,
 }
@@ -39,7 +39,8 @@ class NNetWrapper(NeuralNet):
         # print("input_boards", input_boards)
         target_pis = np.asarray(target_pis)
         target_vs = np.asarray(target_vs)
-        self.nnet.model.fit(x = input_boards, y = [target_pis, target_vs], batch_size = args["batch_size"], epochs = args["epochs"])
+        # self.nnet.model.fit(x = input_boards, y = [target_pis, target_vs], batch_size = args["batch_size"], epochs = args["epochs"])
+        self.nnet.pmodel.fit(x = input_boards, y = [target_pis, target_vs], batch_size = args["batch_size"], epochs = args["epochs"])
 
     def predict(self, board):
         """
@@ -50,12 +51,21 @@ class NNetWrapper(NeuralNet):
 
         # preparing input
         board = board.as_float_list()[np.newaxis, :]
+
         # print("BAY board", board)
 
-        # run
-        pi, v = self.nnet.model.predict(board)
+        # board = board.repeat(10000,0)
+        # for i in range(1000):
+            # board.append(board[0].copy())
 
-        #print('PREDICTION TIME TAKEN : {0:03f}'.format(time.time()-start))
+        # run
+        # print("prediction", len(board))
+        # start = time.time()
+        pi, v = self.nnet.model.predict(board)
+        # end = time.time()
+        # print("v=%s"%v,"time=%s"%(end-start))
+
+        print('PREDICTION TIME TAKEN : {0:03f}'.format(time.time()-start))
         return pi[0], v[0]
 
     def save_checkpoint(self, folder='checkpoint', filename='checkpoint.pth.tar'):
