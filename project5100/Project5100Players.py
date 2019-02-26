@@ -11,6 +11,14 @@ class RandomPlayer():
         return random.choice(actions)
 
 
+class PassivePlayer():
+    def __init__(self, game):
+        self.game = game
+
+    def play(self, board):
+        return 45
+
+
 class HumanProject5100Player():
     def __init__(self, game):
         self.game = game
