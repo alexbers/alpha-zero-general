@@ -66,7 +66,7 @@ class Project5100Game(Game):
                 ret_b.myCardsAvailable[action] = 0
                 ret_b.myCardsAvailable[new_card] = 1
 
-                ret_b.myCooldown = 5 if (action) != 14 else 15
+                ret_b.myCooldown = 6 if (action) != 14 else 16
             elif 15 <= action < 30:
                 if action-15 in [0, 1, 6, 7, 14]:
                     ret_b.enemyEffectsTimeLeft[action-15] = 1
@@ -81,13 +81,13 @@ class Project5100Game(Game):
                 ret_b.myCardsAvailable[action-15] = 0
                 ret_b.myCardsAvailable[new_card] = 1
 
-                ret_b.myCooldown = 5 if (action - 15) != 14 else 15
+                ret_b.myCooldown = 6 if (action - 15) != 14 else 16
 
             elif 30 <= action < 45:
                 new_card = random.choice([i for i in range(15) if ret_b.myCardsAvailable[i] == 0])
                 ret_b.myCardsAvailable[action-30] = 0
                 ret_b.myCardsAvailable[new_card] = 1
-                ret_b.myCooldown = 2
+                ret_b.myCooldown = 3
         else:
             # the same, but vice versa
             if 0 <= action < 15:
@@ -104,7 +104,7 @@ class Project5100Game(Game):
                 ret_b.enemyCardsAvailable[action] = 0
                 ret_b.enemyCardsAvailable[new_card] = 1
 
-                ret_b.enemyCooldown = 5 if (action) != 14 else 15
+                ret_b.enemyCooldown = 6 if (action) != 14 else 16
             elif 15 <= action < 30:
                 if action-15 in [0, 1, 6, 7, 14]:
                     ret_b.myEffectsTimeLeft[action-15] = 1
@@ -119,12 +119,12 @@ class Project5100Game(Game):
                 ret_b.enemyCardsAvailable[action-15] = 0
                 ret_b.enemyCardsAvailable[new_card] = 1
 
-                ret_b.enemyCooldown = 5 if (action - 15) != 14 else 15
+                ret_b.enemyCooldown = 6 if (action - 15) != 14 else 16
             elif 30 <= action < 45:
                 new_card = random.choice([i for i in range(15) if ret_b.enemyCardsAvailable[i] == 0])
                 ret_b.enemyCardsAvailable[action-30] = 0
                 ret_b.enemyCardsAvailable[new_card] = 1
-                ret_b.enemyCooldown = 2
+                ret_b.enemyCooldown = 3
 
         ret_b.turn_number += 1
         if ret_b.turn_number % 2 == 0:
