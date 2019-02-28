@@ -1,5 +1,6 @@
 import random
 import numpy as np
+import math
 
 # bad code
 def itb(num: int, length: int):
@@ -135,7 +136,7 @@ class Board:
         myS_old = self.myS
         myB_old = self.myB
         self.myS = int(myS_old*mySI - myB_old*myS_old*mySD)
-        self.myB = max(0, int(myB_old*myBD + myB_old*myS_old*mySD*myBI + 0.9999999999))
+        self.myB = max(0, math.ceil(myB_old*myBD + myB_old*myS_old*mySD*myBI))
         self.myM = self.myM + myS_old*myIPS
 
         if self.enemyEffectsTimeLeft[0]:
@@ -174,7 +175,7 @@ class Board:
         enemyS_old = self.enemyS
         enemyB_old = self.enemyB
         self.enemyS = int(enemyS_old*enemySI - enemyB_old*enemyS_old*enemySD)
-        self.enemyB = max(0, int(enemyB_old*enemyBD + enemyB_old*enemyS_old*enemySD*enemyBI + 0.9999999999))
+        self.enemyB = max(0, math.ceil(enemyB_old*enemyBD + enemyB_old*enemyS_old*enemySD*enemyBI))
         self.enemyM = self.enemyM + enemyS_old*enemyIPS
 
 
