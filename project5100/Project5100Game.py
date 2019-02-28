@@ -129,6 +129,12 @@ class Project5100Game(Game):
         ret_b.turn_number += 1
         if ret_b.turn_number % 2 == 0:
             ret_b.calc_next_round()
+
+            # speedup optimization: skip intermediate boards
+            while ret_b.myCooldown > 0 and ret_b.enemyCooldown > 0:
+                ret_b.turn_number += 2
+                ret_b.calc_next_round()
+
         # print("next", ret_b)
         return (ret_b, -player)
 
