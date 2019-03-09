@@ -8,13 +8,13 @@ from utils import *
 
 args = dict({
     'numIters': 1000,
-    'numEps': 102,
+    'numEps': 300,
     'tempThreshold': 15,
-    'updateThreshold': 0.55,
+    'updateThreshold': 0.49,
     'maxlenOfQueue': 200000,
     'numMCTSSims': 20,
     'arenaCompare': 40,
-    'cpuct': 1,
+    'cpuct': 4.0,
 
     'checkpoint': './temp/',
     'numItersForTrainExamplesHistory': 20,
@@ -50,9 +50,3 @@ if __name__=="__main__":
 
         c = Coach(g, nnet, args)
         c.pit(start_iter)
-
-
-
-        # if args["load_model"]:
-        # print("Load trainExamples from file")
-    # c.learn()
