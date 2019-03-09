@@ -4,6 +4,7 @@ import math
 
 # bad code
 def itb(num: int, length: int):
+    #print(num)
     """
     Converts integer to bit array
     Someone fix this please :D - it's horrible
@@ -13,6 +14,8 @@ def itb(num: int, length: int):
     """
     if num >= 2**length:
         num = 2**length - 1
+    if num < 0:
+        num = 0
     num = int(num)
     if length == 13:
         return [int(i) for i in '{0:013b}'.format(num)]
@@ -36,10 +39,9 @@ class Board:
 
         self.myCooldown = 0
 
-        # BPlus BMinus BIPlus BIMinus BDPlus BDMinus SPlus SMinus SIPlus SIMinus SDPlus SDMinus IPSPlus IPSMinus Centerer 
-        #  S×=0.5 разово B×=0.5 разово если S>15000 и B>200
-        self.myEffectsTimeLeft = [0] * 15
-        self.myCardsAvailable = [0] * 15
+        # B+ B- BI+ BI- BD+ BD- S+ S- SI+ SI- SD+ SD- IPS+ IPS- Centerer M-
+        self.myEffectsTimeLeft = [0] * 16
+        self.myCardsAvailable = [0] * 16
 
         self.enemyS = 10000
         self.enemyB = 200
@@ -47,23 +49,25 @@ class Board:
 
         self.enemyCooldown = 0
 
-        self.enemyEffectsTimeLeft = [0] * 15
-        self.enemyCardsAvailable = [0] * 15
+        self.enemyEffectsTimeLeft = [0] * 16
+        self.enemyCardsAvailable = [0] * 16
 
         self.turn_number = 0
 
-        for i in random.sample(range(15), 5):
+        for i in random.sample(range(16), 5):
             self.myCardsAvailable[i] = 1
 
-        for i in random.sample(range(15), 5):
+        for i in random.sample(range(16), 5):
             self.enemyCardsAvailable[i] = 1
 
+        self.myNextA = None
+        self.enemyNextA = None
 
     def __str__(self):
-        ret = "%s %s %s %s %s %s %s %s %s %s %s %s %s" % (self.myS, self.myB, self.myM, 
+        ret = "%s %s %s %s %s %s %s %s %s %s %s %s %s %s %s" % (self.myS, self.myB, self.myM, 
             self.myCooldown, self.myEffectsTimeLeft, self.myCardsAvailable, self.enemyS, 
             self.enemyB, self.enemyM, self.enemyCooldown, self.enemyEffectsTimeLeft, 
-            self.enemyCardsAvailable, self.turn_number)
+            self.enemyCardsAvailable, self.myNextA, self.enemyNextA, self.turn_number)
         # print(ret)
         return ret
 
@@ -72,7 +76,6 @@ class Board:
         ret += itb(self.myS, 17)
         ret += itb(self.myB, 13)
         ret += itb(self.myM//1000, 23)
-        ret += onehot(self.myCooldown, 16)
         ret += self.myEffectsTimeLeft
         ret += self.myCardsAvailable
 
@@ -82,9 +85,91 @@ class Board:
         ret += onehot(self.enemyCooldown, 16)
         ret += self.enemyEffectsTimeLeft
 
-        # 183
+        # 170
         # print(len(ret))
         return np.array(ret)
+
+
+    def applyActionEffects(self):
+        myA = self.myNextA
+        enemyA = self.enemyNextA
+
+        self.myNextA = None
+        self.enemyNextA = None
+
+        if myA is not None:
+            if 0 <= myA < 16:
+                if myA in [0, 1, 6, 7, 14, 15]:
+                    self.myEffectsTimeLeft[myA] = 1
+                elif myA in [8]:
+                    self.myEffectsTimeLeft[myA] = 4
+                elif myA in [12]:
+                    self.myEffectsTimeLeft[myA] = 12
+                else:
+                    self.myEffectsTimeLeft[myA] = 5
+                new_card = random.choice([i for i in range(16) if self.myCardsAvailable[i] == 0])
+                self.myCardsAvailable[myA] = 0
+                self.myCardsAvailable[new_card] = 1
+
+                self.myCooldown = 6 if (myA) != 14 else 16
+            elif 16 <= myA < 32:
+                if myA-16 in [0, 1, 6, 7, 14, 15]:
+                    self.enemyEffectsTimeLeft[myA-16] = 1
+                elif myA-16 in [8]:
+                    self.enemyEffectsTimeLeft[myA-16] = 4
+                elif myA-16 in [12]:
+                    self.enemyEffectsTimeLeft[myA-16] = 12
+                else:
+                    self.enemyEffectsTimeLeft[myA-16] = 5
+
+                new_card = random.choice([i for i in range(16) if self.myCardsAvailable[i] == 0])
+                self.myCardsAvailable[myA-16] = 0
+                self.myCardsAvailable[new_card] = 1
+
+                self.myCooldown = 6 if (myA - 16) != 14 else 16
+            elif 32 <= myA < 48:
+                new_card = random.choice([i for i in range(16) if self.myCardsAvailable[i] == 0])
+                self.myCardsAvailable[myA-32] = 0
+                self.myCardsAvailable[new_card] = 1
+                self.myCooldown = 3
+
+        if enemyA is not None:
+            # the same, but vice versa
+            if 0 <= enemyA < 16:
+                if enemyA in [0, 1, 6, 7, 14, 15]:
+                    self.enemyEffectsTimeLeft[enemyA] = 1
+                elif enemyA in [8]:
+                    self.enemyEffectsTimeLeft[enemyA] = 4
+                elif enemyA in [12]:
+                    self.enemyEffectsTimeLeft[enemyA] = 12
+                else:
+                    self.enemyEffectsTimeLeft[enemyA] = 5
+
+                new_card = random.choice([i for i in range(16) if self.enemyCardsAvailable[i] == 0])
+                self.enemyCardsAvailable[enemyA] = 0
+                self.enemyCardsAvailable[new_card] = 1
+
+                self.enemyCooldown = 6 if (enemyA) != 14 else 16
+            elif 16 <= enemyA < 32:
+                if enemyA-16 in [0, 1, 6, 7, 14, 15]:
+                    self.myEffectsTimeLeft[enemyA-16] = 1
+                elif enemyA-16 in [8]:
+                    self.myEffectsTimeLeft[enemyA-16] = 4
+                elif enemyA-16 in [12]:
+                    self.myEffectsTimeLeft[enemyA-16] = 12
+                else:
+                    self.myEffectsTimeLeft[enemyA-16] = 5
+
+                new_card = random.choice([i for i in range(16) if self.enemyCardsAvailable[i] == 0])
+                self.enemyCardsAvailable[enemyA-16] = 0
+                self.enemyCardsAvailable[new_card] = 1
+
+                self.enemyCooldown = 6 if (enemyA - 16) != 14 else 16
+            elif 32 <= enemyA < 48:
+                new_card = random.choice([i for i in range(16) if self.enemyCardsAvailable[i] == 0])
+                self.enemyCardsAvailable[enemyA-32] = 0
+                self.enemyCardsAvailable[new_card] = 1
+                self.enemyCooldown = 3
 
 
     def calc_next_round(self):
@@ -99,6 +184,8 @@ class Board:
         enemySD = 0.0005
         enemyBD = 0.8
         enemyIPS = 1000
+
+        self.applyActionEffects()
 
         if self.myEffectsTimeLeft[0]:
             self.myB += 20
@@ -132,6 +219,9 @@ class Board:
             if self.myS > 15000 and self.myB > 200:
                 self.myS //= 2
                 self.myB //= 2
+        if self.myEffectsTimeLeft[15]:
+            self.myM -= 100000000
+
 
         myS_old = self.myS
         myB_old = self.myB
@@ -171,6 +261,8 @@ class Board:
             if self.enemyS > 15000 and self.enemyB > 200:
                 self.enemyS //= 2
                 self.enemyB //= 2
+        if self.enemyEffectsTimeLeft[15]:
+            self.enemyM -= 100000000
 
         enemyS_old = self.enemyS
         enemyB_old = self.enemyB

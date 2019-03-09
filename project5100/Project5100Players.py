@@ -11,6 +11,22 @@ class RandomPlayer():
         return random.choice(actions)
 
 
+class RandomSmartPlayer():
+    def __init__(self, game):
+        self.game = game
+
+    def play(self, board):
+        valids = self.game.getValidMoves(board, 1)
+        actions = [i for i in range(self.game.getActionSize()) if valids[i]]
+
+        if board.enemyS < 500 and valids[22]:
+            return 22
+
+        return random.choice(actions)
+
+        
+
+
 class PassivePlayer():
     def __init__(self, game):
         self.game = game

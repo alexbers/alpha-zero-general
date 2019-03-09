@@ -18,10 +18,10 @@ from .Project5100NNet import Project5100NNet as project5100
 args = {
     'lr': 0.001,
     'dropout': 0.3,
-    'epochs': 10,
+    'epochs': 40,
     'batch_size': 1024*3,
     'cuda': False,
-    'num_channels': 256,
+    'num_channels': 32,
 }
 
 class NNetWrapper(NeuralNet):
