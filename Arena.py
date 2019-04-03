@@ -23,7 +23,7 @@ class Arena():
         self.game = game
         self.display = display
 
-    def playGame(self, verbose=False):
+    def playGame(self, verbose=False, write=False):
         """
         Executes one episode of a game.
 
@@ -37,12 +37,23 @@ class Arena():
         curPlayer = 1
         board = self.game.getInitBoard()
         it = 0
+
+        if write:
+            game_log = open("game_log.txt", "w")
+            # game_log_p2 = open("game_log_p2.txt", "w")
+
+
         while self.game.getGameEnded(board, curPlayer)==0:
             it+=1
             if verbose:
                 assert(self.display)
                 print("Turn ", str(it), "Player ", str(curPlayer))
                 self.display(board)
+            if write:
+                if curPlayer == 1:
+                    game_log.write("%s %s %s %s %s %s %s\n" % (board.turn_number//2, board.myS, 
+                                                       board.myB, board.myM, board.enemyS, board.enemyB, board.enemyM))
+                    game_log.flush()
 
             valids = self.game.getValidMoves(self.game.getCanonicalForm(board, curPlayer),1)
             if sum(valids) == 1:
@@ -54,6 +65,26 @@ class Arena():
                     print("something is wrong", valids)
             else:
                 action = players[curPlayer+1](self.game.getCanonicalForm(board, curPlayer))
+                if write:
+                    if curPlayer == 1:
+                        def a2str(a):
+                            EFFECTS = [
+                                    "B+", "B-", "BI+", "BI-", "BD+",
+                                    "BD-", "S+", "S-", "SI+", "SI-",
+                                    "SD+", "SD-", "IPS+", "IPS-", "Centerer", "M-"
+                                ]
+                            if a == 48:
+                                return "skip"
+                            elif a < 16:
+                                return "my " + EFFECTS[a]
+                            elif a < 32:
+                                return "enemy " + EFFECTS[a-16]
+                            elif a < 48:
+                                return "drop " + EFFECTS[a-32]
+
+                        print(str(board))
+                        print(a2str(action))
+                        print()
 
             if valids[action]==0:
                 print(action)
@@ -63,9 +94,12 @@ class Arena():
             assert(self.display)
             print("Game over: Turn ", str(it), "Result ", str(self.game.getGameEnded(board, 1)))
             self.display(board)
+        if write:
+            game_log.close()
+
         return self.game.getGameEnded(board, 1)
 
-    def playGames(self, num, verbose=False):
+    def playGames(self, num, verbose=False, write=False):
         """
         Plays num games in which player1 starts num/2 games and player2 starts
         num/2 games.
@@ -86,7 +120,7 @@ class Arena():
         twoWon = 0
         draws = 0
         for _ in range(num):
-            gameResult = self.playGame(verbose=verbose)
+            gameResult = self.playGame(verbose=verbose, write=write)
             if gameResult==1:
                 oneWon+=1
             elif gameResult==-1:
@@ -102,10 +136,13 @@ class Arena():
             bar.next()
             print("Stats:", oneWon, twoWon, draws)
 
+        if write:
+            return oneWon, twoWon, draws
+
         self.player1, self.player2 = self.player2, self.player1
         
         for _ in range(num):
-            gameResult = self.playGame(verbose=verbose)
+            gameResult = self.playGame(verbose=verbose, write=False)
             if gameResult==-1:
                 oneWon+=1                
             elif gameResult==1:
