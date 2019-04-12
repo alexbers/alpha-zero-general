@@ -1,13 +1,16 @@
+import time
+import os
+import sys
+import copy
+from pickle import Pickler, Unpickler
+from random import shuffle
+
+import numpy as np
+
 from collections import deque
 from Arena import Arena
 from MCTS import MCTS
-import numpy as np
 from pytorch_classification.utils import Bar, AverageMeter
-import time, os, sys
-from pickle import Pickler, Unpickler
-from random import shuffle
-import copy
-
 
 class Coach():
     """
@@ -48,10 +51,14 @@ class Coach():
             # print("canonicalBoard", canonicalBoard)
             temp = int(episodeStep < self.args["tempThreshold"])
 
+
             pi = self.mcts.getActionProb(canonicalBoard, temp=temp)
-            sym = self.game.getSymmetries(canonicalBoard, pi)
-            for b,p in sym:
-                trainExamples.append([b, curPlayer, p, None])
+
+            valids = self.game.getValidMoves(canonicalBoard, 1)
+            if sum(valids) != 1:
+                sym = self.game.getSymmetries(canonicalBoard, pi)
+                for b,p in sym:
+                    trainExamples.append([b, curPlayer, p, None])
 
             action = np.random.choice(len(pi), p=pi)
             board, curPlayer = self.game.getNextState(board, curPlayer, action)
@@ -88,35 +95,55 @@ class Coach():
     def fit(self, iteration):
 
         all_iterations = range(0, iteration)
-        for i in all_iterations[-self.args["numItersForTrainExamplesHistory"]:]:
-            self.loadTrainExamples(i)
-
         trainExamples = []
-        for e in self.trainExamplesHistory:
-            trainExamples.extend(e)
+        for i in all_iterations[-self.args["numItersForTrainExamplesHistory"]:]:
+            for input_board, target_pi, target_v in self.loadTrainExamples(i):
+                input_board = input_board.as_float_list()
+                target_pi = np.random.choice(49, p=target_pi)
+
+                trainExamples.append((input_board, target_pi, target_v))
+
+        t = time.time()
         shuffle(trainExamples)
+        print("SHUFFLED IN %.03f" % (time.time() - t))
 
         # training new network, keeping a copy of the old one
-        self.nnet.save_checkpoint(folder=self.args["checkpoint"], filename='checkpoint_%d.pth.tar.prev' % iteration)
+        #if iteration == 1:
+        #    self.nnet.save_checkpoint(folder=self.args["checkpoint"], filename='checkpoint_0.pth.tar')
         self.nnet.train(trainExamples)
         self.nnet.save_checkpoint(folder=self.args["checkpoint"], filename='checkpoint_%d.pth.tar.next' % iteration)
     
 
-    def pit(self, iteration):
+    def pit(self, iteration, proc_num):
         self.pnet = self.nnet.__class__(self.game)  # the competitor network
-        self.pnet.load_checkpoint(folder=self.args["checkpoint"], filename="checkpoint_%d.pth.tar.prev" % iteration)
+        if iteration != 1:
+            self.pnet.load_checkpoint(folder=self.args["checkpoint"], filename="checkpoint_%d.pth.tar" % (iteration-1))
 
-        pmcts = MCTS(self.game, self.pnet, self.args)
         nmcts = MCTS(self.game, self.nnet, self.args)
+        pmcts = MCTS(self.game, self.pnet, self.args)
         
         print('PITTING AGAINST PREVIOUS VERSION')
         
-        arena = Arena(lambda x: np.argmax(pmcts.getActionProb(x, temp=0)),
-                      lambda x: np.argmax(nmcts.getActionProb(x, temp=0)), self.game)
-        pwins, nwins, draws = arena.playGames(self.args["arenaCompare"])
+        arena = Arena(lambda x: np.argmax(nmcts.getActionProb(x, temp=0)),
+                      lambda x: np.argmax(pmcts.getActionProb(x, temp=0)), self.game)
+        nwins, pwins, draws = arena.playGames(self.args["arenaCompare"] // self.args["genFilesPerIteration"])
+        # nwins = 1
+        # pwins = 2
+        # draws = 0
 
         print('NEW/PREV WINS : %d / %d ; DRAWS : %d' % (nwins, pwins, draws))
-        if pwins+nwins == 0 or float(nwins)/(pwins+nwins) < self.args["updateThreshold"]:
+        self.savePit(iteration, proc_num, nwins, pwins, draws)
+
+
+    def verdict(self, iteration):
+        nwins, pwins, draws = self.loadPit(iteration)
+
+        print('ALL NEW/PREV WINS : %d / %d ; DRAWS : %d' % (nwins, pwins, draws))
+
+        if nwins + pwins == 0 or float(nwins)/(pwins+nwins) < self.args["updateThreshold"]:
+            self.pnet = self.nnet.__class__(self.game)  # the competitor network
+            self.pnet.load_checkpoint(folder=self.args["checkpoint"], filename="checkpoint_%d.pth.tar" % (iteration-1))
+
             print('REJECTING NEW MODEL')
             self.pnet.save_checkpoint(folder=self.args["checkpoint"], filename="checkpoint_%d.pth.tar" % iteration)
         else:
@@ -125,8 +152,39 @@ class Coach():
             self.nnet.save_checkpoint(folder=self.args["checkpoint"], filename='best.pth.tar')                
 
 
-    def getCheckpointFile(self, iteration):
-        return 
+    def savePit(self, iteration, proc_num, nwins, pwins, draws):
+        folder = self.args["checkpoint"]
+        if not os.path.exists(folder):
+            os.makedirs(folder)
+        # print("iteration", iteration)
+        filename = os.path.join(folder,"checkpoint_%d.pth.tar.%d.txt" % (iteration, proc_num))
+        with open(filename, "w") as f:
+            f.write(" ".join(map(str, [nwins, pwins, draws])))
+
+    def loadPit(self, iteration):
+        print("load pit", iteration)
+
+        nwins = 0
+        pwins = 0
+        draws = 0
+
+        for proc_num in range(self.args["genFilesPerIteration"]):
+            pitResultsFile = os.path.join(self.args["checkpoint"], "checkpoint_%d.pth.tar.%d.txt" % (iteration, proc_num))
+
+            if not os.path.isfile(pitResultsFile):
+                print(pitResultsFile)
+                print("File with pitExamples not found. Exiting")
+                sys.exit()
+            else:
+                with open(pitResultsFile, "r") as f:
+                    n_w, p_w, d = map(int, f.read().split())
+                    nwins += n_w
+                    pwins += p_w
+                    draws += d
+    
+        return nwins, pwins, draws
+
+
 
     def saveTrainExamples(self, iteration, proc_num, examples):
         folder = self.args["checkpoint"]
@@ -141,7 +199,11 @@ class Coach():
 
         iterationTrainExamples = deque([], maxlen=self.args["maxlenOfQueue"])
 
-        for proc_num in range(self.args["genFilesPerIteration"]):
+        gen_files_num = self.args["genFilesPerIteration"]
+        if iteration < 15:
+            gen_files_num = 36
+
+        for proc_num in range(gen_files_num):
             examplesFile = os.path.join(self.args["checkpoint"], "checkpoint_%d.pth.tar.examples.%d" % (iteration, proc_num))
             if not os.path.isfile(examplesFile):
                 print(examplesFile)
@@ -150,4 +212,5 @@ class Coach():
             else:
                 with open(examplesFile, "rb") as f:
                     iterationTrainExamples += Unpickler(f).load()
-        self.trainExamplesHistory.append(iterationTrainExamples)
+        return iterationTrainExamples
+        # self.trainExamplesHistory.append(iterationTrainExamples)
