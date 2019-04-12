@@ -18,7 +18,7 @@ from .Project5100NNet import Project5100NNet as project5100
 args = {
     'lr': 0.001,
     'dropout': 0.3,
-    'epochs': 40,
+    'epochs': 80,
     'batch_size': 1024*3,
     'cuda': False,
     'num_channels': 32,
@@ -40,7 +40,7 @@ class NNetWrapper(NeuralNet):
         target_pis = np.asarray(target_pis)
         target_vs = np.asarray(target_vs)
         # self.nnet.model.fit(x = input_boards, y = [target_pis, target_vs], batch_size = args["batch_size"], epochs = args["epochs"])
-        self.nnet.pmodel.fit(x = input_boards, y = [target_pis, target_vs], batch_size = args["batch_size"], epochs = args["epochs"])
+        self.nnet.pmodel.fit(x = input_boards, y = [target_pis, target_vs], batch_size = args["batch_size"], epochs = args["epochs"], validation_split = 0.2)
 
     def predict(self, board):
         """
@@ -60,12 +60,12 @@ class NNetWrapper(NeuralNet):
 
         # run
         # print("prediction", len(board))
-        # start = time.time()
+        start = time.time()
         pi, v = self.nnet.model.predict(board)
         # end = time.time()
         # print("v=%s"%v,"time=%s"%(end-start))
 
-        # print('PREDICTION TIME TAKEN : {0:03f}'.format(time.time()-start))
+        #print('PREDICTION TIME TAKEN : {0:03f}'.format(time.time()-start))
         return pi[0], v[0]
 
     def save_checkpoint(self, folder='checkpoint', filename='checkpoint.pth.tar'):
